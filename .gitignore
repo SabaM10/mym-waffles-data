@@ -1,0 +1,116 @@
+# ============================================================
+# CREDENCIALES Y SECRETOS — nunca commitear
+# ============================================================
+secrets/
+credentials.json
+*.pem
+*.key
+.env
+.env.local
+.env.*.local
+
+# ============================================================
+# DATOS — nunca commitear (data del negocio, PII de clientes)
+# ============================================================
+data/
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================================
+# Client mapping local (contiene nombres reales)
+# ============================================================
+dbt_project/seeds/client_name_mapping.csv
+
+# ============================================================
+# PYTHON
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# uv
+.uv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# ============================================================
+# DBT
+# ============================================================
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+dbt_project/.user.yml
+
+# ============================================================
+# DAGSTER
+# ============================================================
+dagster_project/tmp_dagster_home_*/
+dagster_project/.dagster_home/
+tmp_dagster_home_*/
+
+# ============================================================
+# DOCKER
+# ============================================================
+.docker/
+
+# ============================================================
+# LOGS Y TEMPORALES
+# ============================================================
+*.log
+logs/
+tmp/
+.cache/
+
+# ============================================================
+# IDE Y EDITORES
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# EXPORTS Y BACKUPS
+# ============================================================
+*.bak
+*.backup
+exports/

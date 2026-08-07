@@ -1,0 +1,69 @@
+[project]
+name = "mym-waffles-data"
+version = "0.1.0"
+description = "Data pipeline batch para MyM Waffles: Google Sheets -> DuckDB -> dbt -> Metabase, orquestado con Dagster"
+requires-python = ">=3.11,<3.13"
+authors = [
+    { name = "Saba Miro", email = "sabam1015@gmail.com" }
+]
+readme = "README.md"
+
+dependencies = [
+    # Ingesta desde Google Sheets
+    "gspread>=6.1.0",
+    "google-auth>=2.35.0",
+
+    # Procesamiento de datos
+    "polars>=1.19.0",
+    "pyarrow>=18.0.0",
+
+    # Warehouse local
+    "duckdb>=1.1.0",
+
+    # Configuración
+    "python-dotenv>=1.0.1",
+
+    # Logging estructurado
+    "structlog>=24.4.0",
+
+    # Orquestación
+    "dagster>=1.9.0",
+    "dagster-webserver>=1.9.0",
+    "dagster-duckdb>=0.25.0",
+    "dagster-dbt>=0.25.0",
+
+    # Transformación
+    "dbt-core>=1.9.0",
+    "dbt-duckdb>=1.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "ipython>=8.30.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (ruff format se encarga)
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --tb=short"

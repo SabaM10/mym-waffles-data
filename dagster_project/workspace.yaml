@@ -1,0 +1,13 @@
+# ============================================================
+# Dagster workspace configuration
+# ============================================================
+# Le dice a Dagster dónde encontrar el código de assets, jobs,
+# schedules y sensors del proyecto.
+#
+# `python_module` apunta al módulo Python que Dagster va a cargar.
+# En semana 2, ese módulo va a exportar `defs = Definitions(...)`
+# con los assets reales.
+# ============================================================
+
+load_from:
+  - python_module: dagster_project
