@@ -84,7 +84,8 @@ def _read_tab_as_dataframe(spreadsheet, tab_name: str) -> pl.DataFrame:
     if not aligned_rows:
         return pl.DataFrame()
 
-    return pl.DataFrame(aligned_rows, schema=VENTAS_COLUMNS, orient="row")  
+    schema_dict = {col: pl.Utf8 for col in VENTAS_COLUMNS}
+    return pl.DataFrame(aligned_rows, schema=schema_dict, orient="row")
 
 
 def ingest_pedidos() -> pl.DataFrame:
@@ -106,3 +107,18 @@ def ingest_pedidos() -> pl.DataFrame:
     # 7. Agregar columna `ingested_at` con el timestamp UTC actual.
     # 8. Devolver el DataFrame final.
     pass
+    config = get_config()
+    client = get_sheets_client()
+    list_of_dfs = []
+    sheet_gspread = client.open_by_key(config["gsheets_pedidos_id"])
+    for tab_name in _list_tabs_matching_pattern(sheet_gspread, config["gsheets_pedidos_tab_pattern"]):
+        df = _read_tab_as_dataframe(sheet_gspread, tab_name)
+        list_of_dfs.append(df)
+    list_of_dfs = [df for df in list_of_dfs if not df.is_empty()]
+    if list_of_dfs:
+        final_df = pl.concat(list_of_dfs)
+        final_df = final_df.with_columns(pl.lit(datetime.now(timezone.utc)).alias("ingested_at"))
+    else:
+        final_df = pl.DataFrame()
+    return final_df
+
