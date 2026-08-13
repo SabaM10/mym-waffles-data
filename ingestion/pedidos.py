@@ -1,0 +1,108 @@
+"""
+Ingesta de la Sheet 'VENTAS 2026'.
+
+Lee todas las pestañas mensuales que matchean el patrón definido en .env
+(ej: 'AGOSTO 2026', 'JULIO 2026') y las concatena en un solo DataFrame.
+"""
+
+import re
+from datetime import datetime, timezone
+
+import polars as pl
+import gspread
+
+from ingestion.config import get_config
+from ingestion.sheets_auth import get_sheets_client
+
+VENTAS_COLUMNS = [
+    "CUIT",
+    "CLIENTE",
+    "CANTIDAD",
+    "PEDIDO",
+    "PRECIO",
+    "A FAVOR ENVIO",
+    "PAGO",
+    "SEÑA",
+    "EMISIÓN",
+    "ENTREGA",
+    "PAGO COMPLETADO",
+    "ENTREGADO",
+] 
+FILAS_RESUMEN = {"INGRESOS SUBTOTALES DEL MES", "INGRESOS TOTALES DEL MES", "TOTAL WAFFLES"}
+#FILAS QUE SE DEBEN IGNORAR: FILAS DE RESUMEN, FILAS VACÍAS, FILAS CON CLIENTE VACÍO PERO QUE SE LEIAN IGUAL POR QUE CLIENTE TENIA UN "VALOR".
+def _list_tabs_matching_pattern(spreadsheet, pattern: str) -> list[str]:
+
+    return [worksheet.title for worksheet in spreadsheet.worksheets() if re.match(pattern, worksheet.title)]
+
+
+
+def _read_tab_as_dataframe(spreadsheet, tab_name: str) -> pl.DataFrame:
+   
+    worksheet = spreadsheet.worksheet(tab_name)
+    values = worksheet.get_all_values()
+
+    # Necesitamos al menos fila de título + fila de headers + al menos 1 dato.
+    # Si hay menos de 3 filas, no hay data útil.
+    if len(values) < 3:
+        return pl.DataFrame()
+
+    # Descartar fila 0 (título "VENTAS" mergeado).
+    # Ahora values[0] son los headers reales, values[1:] son los datos.
+    values = values[1:]
+    sheet_headers = values[0]
+    data_rows = values[1:]
+
+    # Para cada columna canónica, encontrar su índice en el sheet (o None si falta).
+    column_indices = {}
+    for canonical_col in VENTAS_COLUMNS:
+        if canonical_col in sheet_headers:
+            column_indices[canonical_col] = sheet_headers.index(canonical_col)
+        else:
+            column_indices[canonical_col] = None
+
+    # Construir las filas alineadas al schema canónico.
+    aligned_rows = []
+    for row in data_rows:
+        aligned_row = []
+        for canonical_col in VENTAS_COLUMNS:
+            idx = column_indices[canonical_col]
+            if idx is None or idx >= len(row):
+                aligned_row.append(None)
+            else:
+                aligned_row.append(row[idx])
+        aligned_rows.append(aligned_row)
+
+    # Filtrar filas donde CLIENTE esté vacío o solo espacios.
+    cliente_idx = VENTAS_COLUMNS.index("CLIENTE")
+    aligned_rows = [
+        row for row in aligned_rows
+        if row[cliente_idx] is not None 
+        and row[cliente_idx].strip() != ""
+        and row[cliente_idx].strip().upper() not in FILAS_RESUMEN
+    ]
+
+    if not aligned_rows:
+        return pl.DataFrame()
+
+    return pl.DataFrame(aligned_rows, schema=VENTAS_COLUMNS, orient="row")  
+
+
+def ingest_pedidos() -> pl.DataFrame:
+    """
+    Función principal: lee todas las pestañas de VENTAS 2026 y las concatena.
+
+    Returns:
+        DataFrame con todos los pedidos de todas las pestañas mensuales,
+        más una columna `ingested_at` con el timestamp de la ingesta.
+    """
+    # TODO: implementar
+    # Pasos:
+    # 1. Obtener config.
+    # 2. Obtener cliente de gspread.
+    # 3. Abrir el Sheet con client.open_by_key(sheet_id).
+    # 4. Listar las pestañas que matchean el patrón.
+    # 5. Leer cada pestaña como DataFrame.
+    # 6. Concatenar todos los DataFrames con pl.concat(lista_de_dfs).
+    # 7. Agregar columna `ingested_at` con el timestamp UTC actual.
+    # 8. Devolver el DataFrame final.
+    pass
