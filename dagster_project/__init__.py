@@ -1,24 +1,11 @@
 """
-MyM Waffles — Dagster project.
-
-Este módulo expone `defs` (Definitions) con todos los assets, jobs,
-schedules y sensors del pipeline.
-
-En semana 1 arranca vacío para verificar que el container levanta.
-Semana 2+ va agregando assets reales.
+MyM Waffles - Dagster project.
 """
 
-from dagster import Definitions
+from dagster import Definitions, load_assets_from_modules
 
-# Stub inicial: sin assets todavía.
-# Cuando agregues assets en semana 2, la firma va a verse así:
-#
-#     from dagster_project.assets import raw_pedidos, raw_precios
-#
-#     defs = Definitions(
-#         assets=[raw_pedidos, raw_precios],
-#         schedules=[...],
-#         resources={...},
-#     )
+from dagster_project import assets
 
-defs = Definitions()
+all_assets = load_assets_from_modules([assets])
+
+defs = Definitions(assets=all_assets)

@@ -89,24 +89,7 @@ def _read_tab_as_dataframe(spreadsheet, tab_name: str) -> pl.DataFrame:
 
 
 def ingest_pedidos() -> pl.DataFrame:
-    """
-    Función principal: lee todas las pestañas de VENTAS 2026 y las concatena.
 
-    Returns:
-        DataFrame con todos los pedidos de todas las pestañas mensuales,
-        más una columna `ingested_at` con el timestamp de la ingesta.
-    """
-    # TODO: implementar
-    # Pasos:
-    # 1. Obtener config.
-    # 2. Obtener cliente de gspread.
-    # 3. Abrir el Sheet con client.open_by_key(sheet_id).
-    # 4. Listar las pestañas que matchean el patrón.
-    # 5. Leer cada pestaña como DataFrame.
-    # 6. Concatenar todos los DataFrames con pl.concat(lista_de_dfs).
-    # 7. Agregar columna `ingested_at` con el timestamp UTC actual.
-    # 8. Devolver el DataFrame final.
-    pass
     config = get_config()
     client = get_sheets_client()
     list_of_dfs = []
