@@ -88,7 +88,7 @@ URLs una vez levantado:
 Proyecto en construcción activa. Roadmap de 12 semanas, un módulo por semana. Ver `docs/roadmap.md`.
 
 - [x] Semana 1: Setup e infraestructura base
-- [ ] Semana 2: Ingesta raw desde Sheets
+- [x] Semana 2: Ingesta raw desde Sheets
 - [ ] Semana 3: Parsing + normalización
 - [ ] Semana 4: dbt setup + staging
 - [ ] Semana 5: Dimensiones + seeds
