@@ -40,7 +40,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Copiamos primero solo pyproject.toml para aprovechar cache de Docker:
 # si el código cambia pero las deps no, esta capa no se rehace.
 COPY pyproject.toml ./
-RUN uv pip install --system -r pyproject.toml
+RUN uv pip install --system --group dev -r pyproject.toml
 
 # --- Copiar el resto del código ---
 # En dev, este directorio se sobrescribe con un bind mount desde el host
