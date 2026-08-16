@@ -73,7 +73,40 @@ def test_chunk_sin_cantidad_va_a_cuarentena():
 
 def test_chunk_con_cantidad_pero_una_sola_palabra_sin_masa_previa():
     """'13 oreos' al inicio (sin masa heredable) va a cuarentena."""
-    # TODO: implementar
-    pass
+    
     resultado = parse_pedido_string("13 oreos")
     assert resultado == {"items": [], "no_parseados": ["13 oreos"]} 
+
+def test_fallback_cantidad_para_input_sin_numero():
+    
+    resultado = parse_pedido_string("Neutros Clásicos", cantidad_default=100)
+    assert resultado == {
+        "items": [{"sabor": "Neutros", "masa": "Clásicos", "cantidad": 100}],
+        "no_parseados": [],
+    }
+def test_masa_por_defecto_cuando_no_hay_masa_anterior():
+    
+    resultado = parse_pedido_string("13 oreos", masa_por_defecto="Clásicos")
+    assert resultado == {
+        "items": [{"sabor": "oreos", "masa": "Clásicos", "cantidad": 13}],
+        "no_parseados": [],
+    }
+
+def test_masa_por_defecto_no_se_usa_si_hay_masa_anterior():  #(para verificar que la herencia gana sobre el default)
+
+    
+    resultado = parse_pedido_string("24 Dulces Integrales + 32 oreos", masa_por_defecto="Clásicos")
+    assert resultado == {
+        "items": [
+            {"sabor": "Dulces", "masa": "Integrales", "cantidad": 24},
+            {"sabor": "oreos", "masa": "Integrales", "cantidad": 32}
+        ],
+        "no_parseados": [],
+    }
+def test_fallback_cantidad_no_se_aplica_si_hay_signo_mas():
+    pass
+    resultado = parse_pedido_string("Neutros Clásicos + 24 Oreos", cantidad_default=100)
+    assert resultado == {
+    "items": [],
+    "no_parseados": ["Neutros Clásicos", "24 Oreos"],
+}

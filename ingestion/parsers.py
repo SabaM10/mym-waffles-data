@@ -11,12 +11,18 @@ para ir a cuarentena, no se descartan silenciosamente.
 import re
 
 
-def parse_pedido_string(pedido: str) -> dict:
+def parse_pedido_string(
+    pedido: str,
+    cantidad_default: int | None = None,
+    masa_por_defecto: str | None = None,
+) -> dict:
     """
     Parsea un string PEDIDO en items estructurados.
 
     Args:
         pedido: string del campo PEDIDO, ej. "192 Neutros Clásicos + 96 Neutros Integrales".
+        cantidad_default: cantidad a usar si no se especifica en el chunk.
+        masa_por_defecto: masa a usar cuando el chunk no tiene masa y no hay masa anterior para heredar.
 
     Returns:
         Dict con dos claves:
@@ -25,12 +31,23 @@ def parse_pedido_string(pedido: str) -> dict:
     """
     if pedido is None or pedido.strip() == "":
         return {"items": [], "no_parseados": []}
+    # Fallback: si el pedido no tiene número al inicio y no tiene '+',
+    # usar cantidad_default como cantidad y todo el string como descripción.
+    if cantidad_default is not None and "+" not in pedido:
+        stripped = pedido.strip()
+        # Chequear si empieza con dígito
+        if stripped and not stripped[0].isdigit():
+        # Reconstruir como "<cantidad> <descripción>" y seguir el flujo normal
+            pedido = f"{cantidad_default} {stripped}"
+
+
     chunks = [chunk.strip() for chunk in pedido.split("+") if chunk.strip()] # Split por "+", limpiar espacios y descartar chunks vacíos.
     items = []
     no_parseados = []
     masa_anterior = None
     for chunk in chunks:
-        parsed = _parse_single_item(chunk, masa_anterior)
+        masa_fallback = masa_anterior if masa_anterior is not None else masa_por_defecto
+        parsed = _parse_single_item(chunk, masa_fallback)
         if parsed is None:
             no_parseados.append(chunk)
         else:
