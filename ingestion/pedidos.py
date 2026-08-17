@@ -53,10 +53,11 @@ def _read_tab_as_dataframe(spreadsheet, tab_name: str) -> pl.DataFrame:
     data_rows = values[1:]
 
     # Para cada columna canónica, encontrar su índice en el sheet (o None si falta).
+    sheet_headers_stripped = [h.strip() for h in sheet_headers]
     column_indices = {}
     for canonical_col in VENTAS_COLUMNS:
-        if canonical_col in sheet_headers:
-            column_indices[canonical_col] = sheet_headers.index(canonical_col)
+        if canonical_col in sheet_headers_stripped:
+            column_indices[canonical_col] = sheet_headers_stripped.index(canonical_col)
         else:
             column_indices[canonical_col] = None
 
