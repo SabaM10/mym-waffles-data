@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: dim_fecha
+    description: "Dimensión de calendario. Una fila por día desde 2024-01-01 hasta 2027-12-31."
+    columns:
+      - name: fecha_id
+        description: "Surrogate key: fecha en formato YYYYMMDD como INTEGER."
+        tests:
+          - unique
+          - not_null
+
+      - name: fecha
+        description: "Fecha en formato DATE."
+        tests:
+          - unique
+          - not_null
+
+      - name: año
+        tests:
+          - not_null
+          - accepted_values:
+              values: [2024, 2025, 2026, 2027]
+
+      - name: mes_numero
+        tests:
+          - not_null
+
+      - name: nombre_mes
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+      - name: nombre_dia
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
+      - name: trimestre
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+
+      - name: es_finde_semana
+        tests:
+          - not_null
