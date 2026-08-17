@@ -40,6 +40,7 @@ services:
       DAGSTER_HOME: /opt/dagster/dagster_home
       DBT_PROFILE: ${DBT_PROFILE:-mym_waffles}
       DBT_TARGET: ${DBT_TARGET:-dev}
+      DBT_PROFILES_DIR: ${DBT_PROFILES_DIR:-/workspace/dbt_project}
       ENVIRONMENT: ${ENVIRONMENT:-dev}
     volumes:
       # Código montado en vivo (edición desde el host se refleja en el container)

@@ -1,0 +1,14 @@
+# ============================================================
+# Perfil de conexión al warehouse.
+# ============================================================
+# Referencia al path del .duckdb desde variable de entorno.
+# El env var se define en .env (ya cargado por Docker Compose).
+# ============================================================
+
+mym_waffles:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH') }}"
+      threads: 4

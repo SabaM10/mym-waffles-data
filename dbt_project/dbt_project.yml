@@ -1,0 +1,44 @@
+# ============================================================
+# Configuración principal del proyecto dbt para MyM Waffles.
+# ============================================================
+
+name: 'mym_waffles'
+version: '1.0.0'
+config-version: 2
+
+# El profile a usar (definido en profiles.yml).
+profile: 'mym_waffles'
+
+# Rutas relativas a este archivo.
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Donde dbt guarda artefactos de build (compiled SQL, logs, docs).
+# Está en .gitignore.
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ============================================================
+# Materializaciones por defecto según capa.
+# ============================================================
+# Staging: views (cambian frecuentemente, no vale la pena guardar).
+# Intermediate: views (lógica intermedia).
+# Marts: tables (capa final, se consulta desde el dashboard).
+# ============================================================
+
+models:
+  mym_waffles:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
