@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_pedidos
+    description: "Pedidos tipados y limpiados desde raw.pedidos. Fuente para dimensiones e intermediate models."
+    columns:
+      - name: pedido_id
+        description: "Surrogate key: md5 de cliente + pedido_string + fecha_emision."
+        tests:
+          - unique
+          - not_null
+
+      - name: cliente_raw
+        description: "Nombre del cliente sin normalizar. La normalización vive en dim_cliente."
+        tests:
+          - not_null
+
+      - name: cantidad_total
+        description: "Cantidad total de unidades del pedido."
+        tests:
+          - not_null
+
+      - name: metodo_pago
+        description: "Método de pago del pedido. Valores canónicos."
+        tests:
+        - accepted_values:
+            values: ['Efectivo', 'MercadoPago']
+
+      - name: fecha_emision
+        description: "Fecha de emisión del pedido."
+        tests:
+          - not_null
+
+      - name: fecha_entrega
+        description: "Fecha de entrega del pedido."
+        tests:
+          - not_null

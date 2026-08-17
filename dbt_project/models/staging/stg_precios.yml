@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: stg_precios
+    description: "Rate card tipada y limpiada desde raw.precios. Fuente para dim_tarifa."
+    columns:
+      - name: tarifa_id
+        description: "Surrogate key: md5 de segmento + producto_desc + unidades_pack."
+        tests:
+          - unique
+          - not_null
+
+      - name: segmento
+        description: "Segmento de la tarifa."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MINORISTA', 'PROMO', 'MAYORISTA', 'PROTEICO']
+
+      - name: producto_desc
+        description: "Descripción del producto de la tarifa."
+        tests:
+          - not_null
+
+      - name: unidades_pack
+        description: "Cantidad de unidades del pack."
+        tests:
+          - not_null
+
+      - name: precio_venta_ars
+        description: "Precio de venta del pack en ARS."
+        tests:
+          - not_null

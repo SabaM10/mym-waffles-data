@@ -1,0 +1,58 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Datos crudos ingestados desde Google Sheets por el pipeline Python."
+    schema: raw
+    tables:
+      - name: pedidos
+        description: "Pedidos ingestados desde la Sheet 'VENTAS 2026'. Una fila por pedido."
+        columns:
+          - name: CUIT
+            description: "CUIT del cliente. Muchas veces vacío para B2C."
+          - name: CLIENTE
+            description: "Nombre libre del cliente. Requiere normalización posterior."
+          - name: CANTIDAD
+            description: "Cantidad total de unidades del pedido. String en raw."
+          - name: PEDIDO
+            description: "String con la descomposición del pedido, ej. '192 Neutros Clásicos + 96 Neutros Integrales'."
+          - name: PRECIO
+            description: "Precio total del pedido en ARS. String con formato '$X.XXX'."
+          - name: "A FAVOR ENVIO"
+            description: "Excedente cobrado por envío a favor de MyM."
+          - name: PAGO
+            description: "Método de pago: Efectivo | MercadoPago."
+          - name: SEÑA
+            description: "Monto de seña pagado en ARS."
+          - name: EMISIÓN
+            description: "Fecha de emisión del pedido. Formato dd/mm/yyyy."
+          - name: ENTREGA
+            description: "Fecha de entrega del pedido."
+          - name: "PAGO COMPLETADO"
+            description: "Boolean como string: TRUE | FALSE."
+          - name: ENTREGADO
+            description: "Boolean como string: TRUE | FALSE."
+          - name: ingested_at
+            description: "Timestamp UTC de la ingesta. Agregado por el pipeline Python."
+
+      - name: precios
+        description: "Rate card ingestada desde la Sheet de precios (pestaña VIGENTES). Una fila por tarifa."
+        columns:
+          - name: SEGMENTO
+            description: "Minorista | Promo | Mayorista | Proteico."
+          - name: PRODUCTO
+            description: "Descripción del producto de la tarifa (varía por segmento)."
+          - name: PACK
+            description: "Cantidad de unidades del pack. String en raw."
+          - name: "PRECIO VENTA ($)"
+            description: "Precio de venta del pack. String con formato '$X.XXX'."
+          - name: "COSTO PACK ($)"
+            description: "Costo de producción del pack (opcional, uso interno)."
+          - name: "MARGEN REAL"
+            description: "Margen real calculado. String con formato 'XX,X%'."
+          - name: "vs OBJETIVO"
+            description: "Diferencia vs objetivo (65% por default). String con formato '+X,X%'."
+          - name: ALERTA
+            description: "OK | REVISAR según margen."
+          - name: ingested_at
+            description: "Timestamp UTC de la ingesta."
