@@ -42,3 +42,11 @@ models:
     marts:
       +materialized: table
       +schema: marts
+seeds:
+  mym_waffles:
+    +schema: seeds
+    productos_catalogo:
+      +column_types:
+        masa: varchar
+        sabor: varchar
+        activo: boolean

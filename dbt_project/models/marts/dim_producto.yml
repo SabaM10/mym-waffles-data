@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: dim_producto
+    description: "Dimensión de productos. Catálogo de 8 SKUs válidos (masa × sabor)."
+    columns:
+      - name: producto_id
+        description: "Surrogate key: md5 de masa + sabor."
+        tests:
+          - unique
+          - not_null
+
+      - name: masa
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Clásica', 'Integral', 'Proteica']
+
+      - name: sabor
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Dulce', 'Salado', 'Neutro', 'Oreo']
+
+      - name: nombre_producto
+        tests:
+          - not_null
+          - unique
+
+      - name: activo
+        tests:
+          - not_null
