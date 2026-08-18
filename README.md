@@ -53,7 +53,19 @@ docker compose up -d
 # 4. Materializar assets
 docker compose exec dagster dagster asset materialize --select "*"
 ```
+### Client mapping local
 
+El archivo `dbt_project/seeds/client_name_mapping.csv` contiene 
+mappings de nombres reales de clientes y no se commitea (está en 
+`.gitignore`). Se transfiere manualmente entre entornos.
+
+Para arrancar sin el CSV real, copiá el `.example.csv`:
+
+```bash
+cp dbt_project/seeds/client_name_mapping.example.csv dbt_project/seeds/client_name_mapping.csv
+```
+
+Después editá con los mappings reales de tu deployment.
 URLs una vez levantado:
 - Dagster UI: http://localhost:3000
 - Metabase: http://localhost:3001
