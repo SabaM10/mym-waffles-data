@@ -114,3 +114,6 @@ Thumbs.db
 *.bak
 *.backup
 exports/
+
+# Histórico de precios (contiene costos comerciales sensibles)
+dbt_project/seeds/precios_historicos.csv
