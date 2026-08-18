@@ -1,0 +1,4 @@
+nombre_normalizado,cliente_canonico,tipo_cliente,es_ambiguo
+cliente ejemplo b2c,Cliente Ejemplo B2C,B2C,false
+cliente ejemplo b2b,Cliente Ejemplo B2B,B2B,false
+cliente ambiguo,Cliente Ambiguo,B2B,true

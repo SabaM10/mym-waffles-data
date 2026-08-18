@@ -50,3 +50,9 @@ seeds:
         masa: varchar
         sabor: varchar
         activo: boolean
+    client_name_mapping:
+      +column_types:
+        nombre_normalizado: varchar
+        cliente_canonico: varchar
+        tipo_cliente: varchar
+        es_ambiguo: boolean

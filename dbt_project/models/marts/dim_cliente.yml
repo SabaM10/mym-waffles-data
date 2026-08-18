@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: dim_cliente
+    description: "Dimensión de clientes. Una fila por cliente canónico único después de normalización y mapping."
+    columns:
+      - name: cliente_id
+        description: "Surrogate key: md5 de cliente_canonico."
+        tests:
+          - unique
+          - not_null
+
+      - name: cliente_canonico
+        description: "Nombre canónico del cliente (Title Case). Para desconocidos, prefijo 'Desconocido: '."
+        tests:
+          - unique
+          - not_null
+
+      - name: tipo_cliente
+        description: "B2B (revendedor) o B2C (consumidor final). 'Desconocido' si no está en el mapping."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['B2B', 'B2C', 'Desconocido']
+
+      - name: es_ambiguo
+        description: "True si el mismo nombre puede corresponder a más de un cliente real."
+        tests:
+          - not_null
+
+      - name: necesita_mapping
+        description: "True si el nombre normalizado no tiene mapping manual. Requiere agregarlo al seed."
+        tests:
+          - not_null
