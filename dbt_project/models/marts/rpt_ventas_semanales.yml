@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: rpt_ventas_semanales
+    description: "Mart de reporte semanal de ventas con métricas totales, split B2B/B2C, y estado."
+    columns:
+      - name: año
+        tests:
+          - not_null
+      - name: semana_del_año
+        tests:
+          - not_null
+      - name: total_pedidos
+        tests:
+          - not_null
+      - name: total_facturado_ars
+        tests:
+          - not_null

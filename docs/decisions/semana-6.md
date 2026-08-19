@@ -165,6 +165,33 @@ vez que se ejecuta el pipeline.
 Filtrar ocultaría la información. Cambiar el test lo debilitaría. Dejar 
 el fail documentado mantiene la señal viva.
 
+
+### Decisión 7: Bug de matching por segmento y su fix
+
+Al implementar el matching, apareció un bug conceptual: el algoritmo 
+generaba `producto_desc = "CLÁSICA / DULCE - SALADO - NEUTRO"` para 
+sabores no-oreo sin importar la cantidad. Cuando el pedido era mayorista 
+(cantidad > 24), buscaba tarifas mayoristas para ese producto, pero en 
+la rate card mayorista existe como "TODOS LOS SABORES" (agrupado), no 
+como "CLÁSICA / DULCE - SALADO - NEUTRO" (nombre solo minorista).
+
+El resultado: al no encontrar tarifas mayoristas del producto buscado, 
+el fallback tomaba tarifas minoristas de pack chico y calculaba precios 
+erróneos.
+
+**Fix**: la función `masa_sabor_a_producto_desc` ahora recibe la cantidad 
+como parámetro y devuelve el nombre correcto según segmento:
+- Oreo: siempre "OREO".
+- No-oreo con cantidad ≤ 24: "CLÁSICA / DULCE - SALADO - NEUTRO" (minorista).
+- No-oreo con cantidad > 24: "TODOS LOS SABORES" (mayorista).
+
+**Aprendizaje**: los nombres de producto en la rate card no son 
+uniformes entre segmentos. Este tipo de asimetría requiere lógica 
+específica de mapping. En un rediseño ideal, se separaría la representación 
+canónica del producto (masa, sabor) de la descripción comercial 
+(producto_desc en cada segmento).
+
+
 ## Consecuencias
 
 ### Ganancias
@@ -181,7 +208,18 @@ el fail documentado mantiene la señal viva.
 - **Modelo Python de dbt funcionando**: aprendizaje transferible a 
   cualquier proyecto donde se necesite lógica Python dentro de un 
   pipeline dbt.
-
+- **Reconciliación reveló casos de datos fuera del modelo**: pedidos de 
+  proteicos (fuera de scope) quedan con precios calculados incorrectos 
+  porque no hay tarifas modeladas para PROTEICO. Cuando se incorporen 
+  proteicos al modelo, se resolverá.
+- **Reconciliación reveló casos comerciales legítimos**: pedidos donde 
+  se cobró precio pre-aumento por gentileza, o se aplicaron descuentos 
+  negociados, aparecen como discrepancias en la reconciliación. En un 
+  futuro sería útil agregar una columna `es_negociado` en el sheet para 
+  marcarlos y filtrarlos del análisis de anomalías.
+- **`rpt_ventas_semanales` agregado como primer mart entregable**: 
+  agrupación por semana con métricas totales, split B2B/B2C, y estado. 
+  Base para el dashboard de Metabase de semana 8.
 ### Costos
 
 - **Complejidad de setup del modelo Python**: dbt-duckdb ejecuta el 
