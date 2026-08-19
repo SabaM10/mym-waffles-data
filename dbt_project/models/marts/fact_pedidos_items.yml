@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: fact_pedido_items
+    description: "Fact table de items dentro de cada pedido. Una fila por (pedido × masa × sabor)."
+    columns:
+      - name: pedido_item_id
+        tests:
+          - unique
+          - not_null
+      - name: pedido_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('fact_pedidos')
+              field: pedido_id
+      - name: cantidad
+        tests:
+          - not_null
+      - name: orden_en_pedido
+        tests:
+          - not_null

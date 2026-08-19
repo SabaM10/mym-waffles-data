@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: fact_pedidos
+    description: "Fact table de cabecera de pedidos. Una fila por pedido."
+    columns:
+      - name: pedido_id
+        tests:
+          - unique
+          - not_null
+      - name: cantidad_total
+        tests:
+          - not_null
+      - name: precio_total_ars
+        tests:
+          - not_null
+      - name: fecha_emision_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fecha')
+              field: fecha_id
+      - name: fecha_entrega_id
+        tests:
+          - relationships:
+              to: ref('dim_fecha')
+              field: fecha_id
