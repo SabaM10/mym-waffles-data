@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: dim_tarifa
+    description: "Dimensión de tarifas con SCD Type 2. Cada versión histórica tiene su propio tarifa_id."
+    columns:
+      - name: tarifa_id
+        description: "Surrogate key: md5 de segmento + producto + pack + valid_from."
+        tests:
+          - unique
+          - not_null
+
+      - name: segmento
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MINORISTA', 'PROMO', 'MAYORISTA']
+
+      - name: producto_desc
+        tests:
+          - not_null
+
+      - name: unidades_pack
+        tests:
+          - not_null
+
+      - name: precio_venta_ars
+        tests:
+          - not_null
+
+      - name: precio_unitario_ars
+        tests:
+          - not_null
+
+      - name: valid_from
+        tests:
+          - not_null
+
+      - name: es_current
+        tests:
+          - not_null

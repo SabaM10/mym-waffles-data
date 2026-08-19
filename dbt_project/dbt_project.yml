@@ -56,3 +56,12 @@ seeds:
         cliente_canonico: varchar
         tipo_cliente: varchar
         es_ambiguo: boolean
+    precios_historicos:
+      +column_types:
+        segmento: varchar
+        producto_desc: varchar
+        unidades_pack: integer
+        precio_venta_ars: decimal(12,2)
+        costo_pack_ars: decimal(12,2)
+        valid_from: date
+        valid_to: date
