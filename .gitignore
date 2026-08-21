@@ -18,6 +18,7 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+scratch_*.py
 
 # ============================================================
 # Client mapping local (contiene nombres reales)
@@ -117,3 +118,6 @@ exports/
 
 # Histórico de precios (contiene costos comerciales sensibles)
 dbt_project/seeds/precios_historicos.csv
+
+
+postgres_data/

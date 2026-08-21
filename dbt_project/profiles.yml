@@ -10,5 +10,5 @@ mym_waffles:
   outputs:
     dev:
       type: duckdb
-      path: "{{ env_var('DUCKDB_PATH') }}"
+      path: "{{ env_var('DUCKDB_PATH', '/workspace/data/mym_waffles.duckdb') }}"
       threads: 4

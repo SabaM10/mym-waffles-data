@@ -42,7 +42,12 @@ services:
       DBT_TARGET: ${DBT_TARGET:-dev}
       DBT_PROFILES_DIR: ${DBT_PROFILES_DIR:-/workspace/dbt_project}
       PYTHONPATH: /workspace
-      ENVIRONMENT: ${ENVIRONMENT:-dev}  
+      ENVIRONMENT: ${ENVIRONMENT:-dev}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-mym}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mym_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-mym_serving}  
     volumes:
       # Código montado en vivo (edición desde el host se refleja en el container)
       - ./:/workspace
@@ -94,7 +99,36 @@ services:
       start_period: 60s
     depends_on:
       - dagster
-
+  # ------------------------------------------------------------
+  # Postgres (capa de serving para Metabase)
+  # ------------------------------------------------------------
+  # DuckDB queda como warehouse (transformación con dbt).
+  # Postgres queda como capa de consumo (dashboards de Metabase).
+  # 
+  # Los marts se exportan de DuckDB a Postgres vía asset Dagster
+  # downstream. Esta separación evita el problema de locks de DuckDB
+  # (un único escritor) y permite usar el driver oficial de Postgres
+  # en Metabase (estable entre versiones, no community).
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: mym_postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mym}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mym_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-mym_serving}
+    volumes:
+      # Data persistente en el repo (bind mount para consistencia con ./data)
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mym} -d ${POSTGRES_DB:-mym_serving}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 # ============================================================
 # Volúmenes nombrados (persistentes entre reinicios)
 # ============================================================
