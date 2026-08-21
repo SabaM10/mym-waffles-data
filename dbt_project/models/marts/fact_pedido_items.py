@@ -79,7 +79,8 @@ def buscar_tarifa(
     """
     if masa is None or sabor is None:
         return {"tarifa_id": None, "precio_unitario": None, "precio_total": None}
-    
+    if masa == "Proteica":
+        return {"tarifa_id": None, "precio_unitario": None, "precio_total": None}
     producto_desc = masa_sabor_a_producto_desc(masa, sabor, cantidad)
     
     # Filtrar tarifas del producto vigentes en la fecha
