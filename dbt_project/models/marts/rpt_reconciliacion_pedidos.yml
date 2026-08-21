@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: rpt_reconciliacion_pedidos
+    description: >
+      Mart de auditoría de reconciliación entre precio del sheet
+      y precio calculado por el pipeline. Una fila por pedido,
+      con categoría de discrepancia. Ver ADR semana 8.
+
+    columns:
+      - name: pedido_id
+        description: FK a fact_pedidos.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('fact_pedidos')
+              field: pedido_id
+
+      - name: cliente_id
+        description: FK a dim_cliente.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_cliente')
+              field: cliente_id
+
+      - name: fecha_emision
+        description: Fecha de emisión del pedido.
+        tests:
+          - not_null
+
+      - name: precio_sheet_ars
+        description: Precio total cargado en el sheet.
+        tests:
+          - not_null
+
+      - name: tipo_discrepancia
+        description: >
+          Categoría de la discrepancia entre precio_sheet y precio_calculado.
+          SIN_TARIFA_MODELADA tiene precedencia sobre las demás.
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - COINCIDE
+                - DISCREPANCIA_CHICA
+                - DISCREPANCIA_GRANDE
+                - SIN_TARIFA_MODELADA
