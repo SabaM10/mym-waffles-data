@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: mart_forecast_backtest
+    description: >
+      Backtesting walk-forward del modelo de forecast semanal.
+      Una fila por semana histórica evaluada, con valor real, predicción
+      del modelo y error absoluto. Alimenta el dashboard "Forecast vs
+      Actual" y el cálculo de banda empírica del forecast semanal.
+      Ver docs/adr/semana-9.md para decisiones metodológicas.
+
+    columns:
+      - name: semana
+        description: Lunes de la semana ISO evaluada
+        data_tests:
+          - not_null
+          - unique
+
+      - name: y_real
+        description: Unidades realmente vendidas esa semana
+        data_tests:
+          - not_null
+
+      - name: y_hat
+        description: Predicción del modelo para esa semana (basada solo en semanas anteriores)
+        data_tests:
+          - not_null
+
+      - name: error_absoluto
+        description: Valor absoluto de (y_real - y_hat)
+        data_tests:
+          - not_null
+
+      - name: modelo
+        description: Identificador del modelo usado (ej. sma_4_v8)
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['sma_4_v8']

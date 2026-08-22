@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: mart_forecast_semanal
+    description: >
+      Forecast semanal de unidades para la próxima semana no observada.
+      Grain: una fila (la semana a predecir). Incluye predicción central,
+      banda de confianza empírica al 90%, y estadísticas del backtest
+      para contexto. Ver docs/adr/semana-9.md para decisiones metodológicas.
+
+    columns:
+      - name: semana_predicha
+        description: Lunes de la semana ISO que se está prediciendo
+        data_tests:
+          - not_null
+          - unique
+
+      - name: prediccion_central
+        description: Predicción central del modelo para la semana
+        data_tests:
+          - not_null
+
+      - name: banda_inferior
+        description: Límite inferior de la banda de confianza empírica
+        data_tests:
+          - not_null
+
+      - name: banda_superior
+        description: Límite superior de la banda de confianza empírica
+        data_tests:
+          - not_null
+
+      - name: nivel_confianza
+        description: Nivel de confianza de la banda (default 0.90 = 90%)
+        data_tests:
+          - not_null
+
+      - name: mae_backtest
+        description: MAE del modelo en backtesting histórico (unidades)
+        data_tests:
+          - not_null
+
+      - name: sesgo_backtest
+        description: Sesgo promedio del modelo en backtesting (unidades). Cercano a 0 indica ausencia de sesgo sistemático.
+        data_tests:
+          - not_null
+
+      - name: modelo
+        description: Identificador del modelo usado
+        data_tests:
+          - not_null
+
+      - name: generated_at
+        description: Timestamp UTC de generación del forecast
+        data_tests:
+          - not_null
