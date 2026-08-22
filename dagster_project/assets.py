@@ -64,7 +64,9 @@ def export_marts_a_postgres() -> None:
         "fact_pedido_items",
         "mart_forecast_backtest",
         "mart_forecast_semanal",
-    ]
+        "rpt_alertas_reorder_b2b",              # ← nuevo, W10
+        "mart_b2b_reorder_probabilistico",      # ← nuevo, W10
+        ]
 
     con = duckdb.connect(duckdb_path, read_only=True)
     try:
