@@ -68,3 +68,4 @@ seeds:
 vars:
   umbral_coincide_ars: 1
   umbral_discrepancia_grande_ars: 1000
+  umbral_alerta_desvios_b2b: 1.0  # nueva
