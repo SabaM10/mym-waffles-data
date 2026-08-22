@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: mart_b2b_reorder_probabilistico
+    description: >
+      Mart probabilístico de reorder para clientes B2B. Complementa
+      rpt_alertas_reorder_b2b (rule-based) con una probabilidad continua
+      basada en la CDF de una distribución Normal ajustada a los intervalos
+      históricos de cada cliente. Una fila por cliente B2B analizable.
+      La columna confianza_estimacion permite al consumidor interpretar
+      la incertidumbre de la probabilidad según cuántos pedidos históricos
+      tiene el cliente.
+
+    columns:
+      - name: cliente_id
+        description: FK a dim_cliente. Surrogate key MD5.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_cliente')
+              field: cliente_id
+
+      - name: cliente_canonico
+        description: Nombre canónico del cliente (denormalizado desde dim_cliente).
+        tests:
+          - not_null
+
+      - name: total_pedidos
+        description: Cantidad de pedidos históricos. Por diseño >= 4.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 4
+              inclusive: true
+
+      - name: fecha_ultimo_pedido
+        description: Fecha del pedido más reciente del cliente.
+        tests:
+          - not_null
+
+      - name: intervalo_promedio_dias
+        description: Promedio de días entre pedidos consecutivos (mu de la Normal ajustada).
+        tests:
+          - not_null
+
+      - name: intervalo_desvio_dias
+        description: >
+          Desvío estándar muestral de los intervalos (sigma de la Normal ajustada).
+          Puede ser NULL o 0 en casos patológicos (intervalos idénticos),
+          en cuyo caso probabilidad_reorder_ya y z_score son NaN.
+
+      - name: dias_desde_ultimo_pedido
+        description: Días desde el último pedido hasta CURRENT_DATE.
+        tests:
+          - not_null
+
+      - name: probabilidad_reorder_ya
+        description: >
+          Métrica principal. Probabilidad (0..1) de que el cliente ya hubiera
+          pedido a esta altura, según CDF Normal ajustada a su cadencia histórica.
+          Interpretación: 0.5 = está exactamente en el promedio histórico;
+          0.84 = está a +1σ; 0.975 = está a +2σ. Puede ser NaN si sigma <= 0.
+          Usar junto con confianza_estimacion para interpretar correctamente.
+
+      - name: z_score
+        description: >
+          Desvíos estándar entre el silencio actual y el promedio histórico.
+          Positivo = atraso. Negativo = aún pronto para pedir. NaN si sigma <= 0.
+
+      - name: confianza_estimacion
+        description: >
+          Confianza de la estimación estadística según cantidad de pedidos:
+          BAJA (< 6 pedidos), MEDIA (6-9), ALTA (>= 10). El consumidor debe
+          interpretar probabilidad_reorder_ya considerando este nivel.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BAJA', 'MEDIA', 'ALTA']
