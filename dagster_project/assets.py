@@ -43,11 +43,13 @@ def raw_precios() -> pl.DataFrame:
     deps=[
         AssetKey(["marts", "rpt_reconciliacion_pedidos"]),
         AssetKey(["marts", "rpt_ventas_semanales"]),
+        AssetKey(["marts", "mart_forecast_backtest"]),
+        AssetKey(["marts", "mart_forecast_semanal"]),
     ],
 )
 def export_marts_a_postgres() -> None:
     """
-    Exporta los marts rpt_* de DuckDB al Postgres de serving.
+    Exporta los marts rpt_* y mart_forecast_* de DuckDB al Postgres de serving.
     Full refresh de cada tabla en cada corrida.
 
     Metabase se conecta a este Postgres, no directo a DuckDB,
@@ -60,6 +62,8 @@ def export_marts_a_postgres() -> None:
         "rpt_ventas_semanales",
         "fact_pedidos",
         "fact_pedido_items",
+        "mart_forecast_backtest",
+        "mart_forecast_semanal",
     ]
 
     con = duckdb.connect(duckdb_path, read_only=True)
