@@ -1,0 +1,89 @@
+version: 2
+
+models:
+  - name: rpt_alertas_reorder_b2b
+    description: >
+      Mart operativo con alertas de reorder para clientes B2B analizables
+      (no ambiguos, con al menos 4 pedidos). Una fila por cliente.
+      El campo ratio_atraso es la métrica principal de severidad: mide
+      cuántas veces el cliente superó su umbral de reorder esperado.
+      Umbral configurable vía var 'umbral_alerta_desvios_b2b' en dbt_project.yml.
+
+    columns:
+      - name: cliente_id
+        description: FK a dim_cliente. Surrogate key MD5.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_cliente')
+              field: cliente_id
+
+      - name: cliente_canonico
+        description: Nombre canónico del cliente (denormalizado desde dim_cliente).
+        tests:
+          - not_null
+
+      - name: total_pedidos
+        description: Cantidad de pedidos históricos del cliente. Por diseño >= 4.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 4
+              inclusive: true
+
+      - name: fecha_ultimo_pedido
+        description: Fecha del pedido más reciente del cliente.
+        tests:
+          - not_null
+
+      - name: intervalo_promedio_dias
+        description: Promedio de días entre pedidos consecutivos del cliente.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+      - name: intervalo_desvio_dias
+        description: >
+          Desvío estándar muestral de los intervalos entre pedidos.
+          Puede ser NULL si el cliente tiene un solo intervalo observado
+          (no aplica con filtro total_pedidos >= 4, pero declarado por completitud).
+
+      - name: umbral_alerta_dias
+        description: >
+          Días esperados sin pedido antes de disparar alerta.
+          Cálculo: intervalo_promedio + (umbral_alerta_desvios_b2b * intervalo_desvio).
+        tests:
+          - not_null
+
+      - name: dias_desde_ultimo_pedido
+        description: Días desde el último pedido hasta CURRENT_DATE.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+      - name: dias_de_atraso
+        description: >
+          Diferencia absoluta entre días transcurridos y umbral.
+          Negativo = cliente al día. Positivo = días por encima del umbral.
+
+      - name: ratio_atraso
+        description: >
+          Métrica principal de severidad. Ratio entre días transcurridos y umbral.
+          < 1.0 = al día. > 1.0 = en alerta. >= 2.0 = alerta severa.
+          Usar para ordenar el dashboard por criticidad.
+        tests:
+          - not_null
+
+      - name: alerta_reorder
+        description: >
+          Flag booleano derivado de ratio_atraso > 1.
+          Útil para filtros directos en Metabase.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
