@@ -150,14 +150,13 @@ negocio decida si acepta la práctica o la limita en el futuro.
 
 ### Decisión 5: Aceptar pedidos históricos de Cliente A consolidados como "data no corregible"
 
-Se identificaron 6 pedidos del cliente Cliente A (3 con cantidad 128 en
+Se identificaron 6 pedidos del cliente A (3 con cantidad 128 en
 enero, 3 con cantidad 112 en febrero-marzo) que muestran discrepancia
 sistemática. Investigación con el dueño reveló que estos pedidos son
 en realidad la suma de dos pedidos distintos (una sucursal + otra),
 cargados como una sola fila porque la segunda sucursal aún no se
 diferenciaba en el sistema de carga. A partir de una fecha posterior,
-los pedidos se cargan separados por sucursal ("Cliente A" y "Cliente A
-Liniers").
+los pedidos se cargan separados por sucursal .
 
 Se decide **no corregir retroactivamente** estos 6 casos.
 

@@ -138,11 +138,10 @@ universales.
 
 Los nombres de cliente en raw tenían múltiples fuentes de suciedad:
 
-- Variaciones ortográficas: `"Ale"`, `"ale"`, `"Ale "`, `"ALE"`.
-- Con y sin acentos: `"Auténtica"`, `"autentica"`, `"la Auténtica"`.
-- Nombres ambiguos: `"terraza"` puede referirse a 2 sucursales distintas.
-- Nombres que ocultan negocios: `"cliente b"` es en realidad "Cliente B 
-  Mejia" (nombre del dueño usado como shorthand del negocio).
+- Variaciones ortográficas.
+- Con y sin acentos.
+- Nombres ambiguos.
+- Nombres que ocultan negocios.
 
 Diseñamos una estrategia de 3 capas para resolverlo:
 
@@ -152,9 +151,7 @@ Modelo intermedio SQL que aplica reglas mecánicas: `lower`, `trim`,
 `strip_accents`, y `regexp_replace` para colapsar espacios múltiples. 
 Resuelve variaciones puramente ortográficas.
 
-Sola no alcanza: reduce fragmentos pero no puede inferir equivalencias 
-semánticas ("cliente b" = "Cliente B") ni identificar ambigüedades 
-("terraza" = 2 sucursales).
+
 
 **Capa 2 — Mapping manual (`client_name_mapping.csv`)**
 
