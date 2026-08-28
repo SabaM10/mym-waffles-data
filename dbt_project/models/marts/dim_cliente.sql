@@ -39,7 +39,7 @@ con_defaults as (
 
     select
         nombre_normalizado,
-        coalesce(cliente_canonico, 'Desconocido: ' || nombre_normalizado) as cliente_canonico,
+        {{ cliente_canonico_fallback('cliente_canonico', 'nombre_normalizado') }} as cliente_canonico,
         coalesce(tipo_cliente, 'Desconocido') as tipo_cliente,
         coalesce(es_ambiguo, false) as es_ambiguo,
         case
