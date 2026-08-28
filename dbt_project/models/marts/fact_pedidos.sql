@@ -70,7 +70,8 @@ pedidos_con_fks as (
     -- Normalizar cliente_raw para join con mapping
     left join clientes_normalizados cn on p.cliente_raw = cn.cliente_raw
     left join mapping_cliente mc on cn.nombre_normalizado = mc.nombre_normalizado
-    left join dim_cliente dc on mc.cliente_canonico = dc.cliente_canonico
+    left join dim_cliente dc
+    on {{ cliente_canonico_fallback('mc.cliente_canonico', 'cn.nombre_normalizado') }} = dc.cliente_canonico
     
     -- FKs de fecha
     left join dim_fecha df_emision on p.fecha_emision = df_emision.fecha
