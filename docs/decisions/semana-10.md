@@ -9,12 +9,12 @@ negocio ("¿cuántas unidades vamos a vender la semana que viene?") y no
 resuelve el dolor operativo real que motivó el proyecto desde el inicio:
 detectar cuándo un cliente B2B específico deja de pedir a tiempo.
 
-La cadencia B2B de MyM Waffles es heterogénea. Cliente T Liniers pide cada 9
+La cadencia B2B de MyM Waffles es heterogénea. Cliente T sucursal 1 pide cada 9
 días con muy poca variación; Cliente G pide cada 50 días con alta dispersión;
-Karina Castelar pide cada 35 días con desvío casi tan grande como el
+Cliente K pide cada 35 días con desvío casi tan grande como el
 promedio. Un cliente "atrasado" no se puede definir con un umbral universal
-en días absolutos: para Cliente T Liniers, 20 días de silencio es escandaloso;
-para Cliente G, es dentro de lo esperable. La solución tiene que ser
+en días absolutos: para cliente T sucursal 1, 20 días de silencio es escandaloso;
+para cliente G, es dentro de lo esperable. La solución tiene que ser
 personalizada por cliente y tiene que salir de la cadencia histórica de
 cada uno.
 
@@ -101,7 +101,7 @@ justificación en semana 8.
 
 **Nota práctica**: en la data actual, la exclusión afecta mayormente al
 Cliente T consolidado histórico. Post-separación operativa, "Cliente T
-Caballito" y "Cliente T Liniers" son canónicos separados no ambiguos, y
+sucursal 2" y "Cliente T sucursal 1" son canónicos separados no ambiguos, y
 ambos entran normalmente al análisis. La exclusión tiene poco costo
 práctico y mucho valor conceptual.
 
@@ -169,8 +169,8 @@ Se decidió que `ratio_atraso` es la métrica principal para ordenar
 alertas por severidad, y las otras dos son complementarias.
 
 **Justificación**: el flag booleano no distingue entre "cliente 4x sobre
-su umbral" (alerta severa, Cliente T Liniers con ratio 4.33) y "cliente
-apenas por encima del umbral" (alerta débil, Karina Castelar con ratio
+su umbral" (alerta severa, Cliente T sucursal 1 con ratio 4.33) y "cliente
+apenas por encima del umbral" (alerta débil, Cliente K con ratio
 1.12). Los dos son `TRUE`, pero requieren atención muy distinta.
 
 `ratio_atraso` es adimensional (no depende de la escala de cadencia del
@@ -243,7 +243,7 @@ clientes son "confiables" y esconder el resto, se muestran todos con
 metadata explícita sobre la calidad de la estimación. Un usuario técnico
 puede filtrar por `confianza_estimacion IN ('MEDIA', 'ALTA')` si lo
 desea; un usuario operativo puede leer la columna en el dashboard y
-saber que "Karina Castelar en 90% con confianza BAJA" es una alerta
+saber que "Cliente K en 90% con confianza BAJA" es una alerta
 menos sólida que "Cliente B en 8.5% con confianza ALTA".
 
 **Consecuencia**: el dashboard operativo puede usar la columna para
