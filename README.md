@@ -60,9 +60,9 @@ detección de errores de carga y de bugs del pipeline.
 
 ```mermaid
 flowchart LR
-    GS["Google Sheets"] --> ING["Ingesta<br/>gspread + Polars"]
+    GS["Google Sheets"] --> ING["Ingesta gspread + Polars"]
     ING --> RAW["DuckDB raw"]
-    RAW --> DBT["dbt<br/>staging - intermediate - marts"]
+    RAW --> DBT["dbt staging a marts"]
     DBT --> PG["Postgres serving"]
     PG --> MB["Metabase"]
     DAG["Dagster"] -.orquesta.-> ING
