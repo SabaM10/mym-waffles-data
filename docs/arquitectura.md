@@ -34,11 +34,11 @@ tomadas a conciencia y documentadas como tales.
 flowchart TD
     GS["Google Sheets<br/>VENTAS 2026 + rate card"]
     ING["ingestion/<br/>Polars + gspread"]
-    RAW["DuckDB · raw<br/>todo VARCHAR"]
-    STG["dbt · staging<br/>tipado y limpieza"]
-    INT["dbt · intermediate"]
-    MARTS["dbt · marts<br/>dims, facts, reportes"]
-    PG["Postgres · serving"]
+    RAW["DuckDB raw<br/>todo VARCHAR"]
+    STG["dbt staging<br/>tipado y limpieza"]
+    INT["dbt intermediate"]
+    MARTS["dbt marts<br/>dims, facts, reportes"]
+    PG["Postgres serving"]
     MB["Metabase"]
     DAG["Dagster<br/>orquesta todo el DAG"]
 
