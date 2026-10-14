@@ -36,6 +36,9 @@ services:
       GSHEETS_PEDIDOS_TAB_PATTERN: ${GSHEETS_PEDIDOS_TAB_PATTERN}
       GSHEETS_PRECIOS_ID: ${GSHEETS_PRECIOS_ID}
       GSHEETS_PRECIOS_TAB: ${GSHEETS_PRECIOS_TAB}
+      # Salida al panel (asset serving/publicar_panel). Vacía = ese asset falla
+      # con un mensaje claro; el resto del pipeline corre igual.
+      GSHEETS_PANEL_ID: ${GSHEETS_PANEL_ID:-}
       DUCKDB_PATH: /workspace/data/mym_waffles.duckdb
       DAGSTER_HOME: /opt/dagster/dagster_home
       DBT_PROFILE: ${DBT_PROFILE:-mym_waffles}
