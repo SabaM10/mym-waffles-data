@@ -1,0 +1,89 @@
+version: 2
+
+models:
+  - name: mart_forecast_semanal_sku
+    description: >
+      Forecast de la próxima semana por SKU (masa x sabor), una fila por SKU
+      del catálogo. Cada SKU tiene su propio backtest walk-forward: se
+      publican el MAE de SMA-4 y el de naive para que se vea en qué SKUs el
+      modelo le gana al baseline y en cuáles no. Las bandas se recortan en
+      cero. Ver docs/decisions/semana-13.md.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['masa', 'sabor']
+      - dbt_utils.expression_is_true:
+          expression: "banda_inferior <= banda_superior"
+      - dbt_utils.expression_is_true:
+          expression: "banda_inferior >= 0 and banda_superior >= 0"
+
+    columns:
+      - name: masa
+        description: Clásica | Integral | Proteica
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['Clásica', 'Integral', 'Proteica']
+
+      - name: sabor
+        description: Dulce | Salado | Neutro | Oreo
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['Dulce', 'Salado', 'Neutro', 'Oreo']
+
+      - name: semana_predicha
+        description: Lunes de la semana que se predice. Igual para todos los SKUs.
+        data_tests:
+          - not_null
+
+      - name: prediccion_central
+        description: SMA-4 de las últimas cuatro semanas del SKU (unidades).
+        data_tests:
+          - not_null
+
+      - name: banda_inferior
+        description: Límite inferior de la banda empírica, recortado en cero.
+        data_tests:
+          - not_null
+
+      - name: banda_superior
+        description: >
+          Límite superior de la banda empírica, recortado en cero. Es lo que
+          el panel usa como "producir para estar tranquilos".
+        data_tests:
+          - not_null
+
+      - name: nivel_confianza
+        description: Nivel de confianza de la banda (0.90).
+        data_tests:
+          - not_null
+
+      - name: mae_backtest
+        description: MAE de SMA-4 en el backtest del SKU (unidades).
+        data_tests:
+          - not_null
+
+      - name: mae_naive
+        description: MAE del baseline naive en el mismo backtest (unidades).
+        data_tests:
+          - not_null
+
+      - name: n_predicciones_backtest
+        description: Semanas evaluadas en el backtest del SKU.
+        data_tests:
+          - not_null
+
+      - name: unidades_ultimas_4
+        description: Unidades vendidas del SKU en las últimas cuatro semanas.
+        data_tests:
+          - not_null
+
+      - name: modelo
+        description: Identificador del modelo.
+        data_tests:
+          - not_null
+
+      - name: generated_at
+        description: Timestamp UTC de generación.
+        data_tests:
+          - not_null

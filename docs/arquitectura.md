@@ -131,6 +131,19 @@ abierta a integraciones futuras que ya hablan Postgres.
 **Costo asumido**: los marts quedan duplicados en dos motores. El serving es una
 copia derivada y desechable; la fuente de verdad siempre es DuckDB.
 
+### Una planilla propia como salida hacia el panel
+
+El panel operativo del negocio (una SPA en Vercel, repo `SabaM10/waffles`) lee
+Google Sheets a través de Apps Script. Para mostrarle el forecast y los clientes
+de la semana no hace falta hostear el pipeline ni exponer una API: el asset
+`serving/publicar_panel` escribe cuatro pestañas en una planilla aparte, "MyM
+Pipeline", y un Apps Script de sólo lectura (`serving/apps_script/lector_panel.gs`)
+las sirve como JSON.
+
+La planilla es nueva a propósito. El service account es Editor de esa planilla y
+sigue con lectura sobre VENTAS 2026: un bug del pipeline nunca puede escribir en
+los pedidos. Detalle y alternativas descartadas en el ADR de semana 13.
+
 ### Docker Compose para el entorno
 
 Un solo `docker compose up` levanta el stack completo: el container de Dagster
@@ -201,7 +214,7 @@ dos veces seguidas produce exactamente el mismo estado.
 | `postgres` | 5432 | Capa de serving |
 | `metabase` | 3001 | Dashboards |
 
-Configuración por variables de entorno. `.env.example` documenta las doce que el
+Configuración por variables de entorno. `.env.example` documenta las trece que el
 código consume; `.env` real está gitignored.
 
 **Convenciones que no son negociables**:

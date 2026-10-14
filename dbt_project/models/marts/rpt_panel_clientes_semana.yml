@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: rpt_panel_clientes_semana
+    description: >
+      Una fila por cliente B2B analizable, con lo que necesita la tabla
+      "quién tendría que pedir esta semana" del panel: estado de la semana
+      (atrasado, le_toca, al_dia), la probabilidad de W10, cuánto suele pedir
+      y de qué. Ver docs/decisions/semana-13.md.
+
+    columns:
+      - name: cliente_id
+        description: FK a dim_cliente.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('rpt_alertas_reorder_b2b')
+              field: cliente_id
+
+      - name: cliente_canonico
+        description: Nombre canónico del cliente.
+        data_tests:
+          - not_null
+
+      - name: fecha_ultimo_pedido
+        description: Fecha del último pedido.
+        data_tests:
+          - not_null
+
+      - name: intervalo_promedio_dias
+        description: Días promedio entre pedidos.
+        data_tests:
+          - not_null
+
+      - name: dias_desde_ultimo_pedido
+        description: Días desde el último pedido hasta hoy.
+        data_tests:
+          - not_null
+
+      - name: unidades_promedio
+        description: Unidades promedio por pedido del cliente.
+        data_tests:
+          - not_null
+
+      - name: masa_habitual
+        description: Masa del SKU que más unidades le compró el cliente.
+
+      - name: sabor_habitual
+        description: Sabor del SKU que más unidades le compró el cliente.
+
+      - name: fecha_proximo_esperado
+        description: fecha_ultimo_pedido + intervalo promedio redondeado.
+        data_tests:
+          - not_null
+
+      - name: estado_semana
+        description: >
+          'atrasado' si alerta_reorder; si no, 'le_toca' cuando
+          fecha_proximo_esperado cae en o antes del domingo de esta semana;
+          si no, 'al_dia'.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['atrasado', 'le_toca', 'al_dia']

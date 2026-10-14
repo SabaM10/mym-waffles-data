@@ -23,6 +23,22 @@ def test_assets_present():
     # Mart principal de semana 6
     assert ["marts", "rpt_ventas_semanales"] in paths
 
+    # Semana 13: forecast por SKU, clientes de la semana y publicación al panel
+    assert ["marts", "mart_forecast_semanal_sku"] in paths
+    assert ["marts", "rpt_panel_clientes_semana"] in paths
+    assert ["serving", "publicar_panel"] in paths
+
+
+def test_publicar_panel_depende_de_los_marts():
+    """El asset que publica corre después de los tres marts que lee."""
+    from dagster import AssetKey
+
+    graph = defs.resolve_asset_graph()
+    padres = graph.get(AssetKey(["serving", "publicar_panel"])).parent_keys
+    assert AssetKey(["marts", "mart_forecast_semanal"]) in padres
+    assert AssetKey(["marts", "mart_forecast_semanal_sku"]) in padres
+    assert AssetKey(["marts", "rpt_panel_clientes_semana"]) in padres
+
 
 def test_schedule_declared():
     """El schedule diario está declarado."""

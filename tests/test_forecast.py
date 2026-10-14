@@ -8,6 +8,8 @@ Cobertura:
 - End-to-end: generar_forecast.
 """
 
+from datetime import date, timedelta
+
 import polars as pl
 import pytest
 
@@ -18,6 +20,8 @@ from ingestion.forecast import (
     walk_forward_backtest,
     calcular_banda_empirica,
     generar_forecast,
+    armar_series_semanales_por_sku,
+    forecast_por_sku,
 )
 
 
@@ -182,3 +186,109 @@ class TestGenerarForecast:
     # central esté "en el medio" porque un modelo sesgado puede tener
     # ambos percentiles del mismo signo, desplazando la banda.
         assert resultado["banda_inferior"] <= resultado["banda_superior"]
+
+# ============================================================
+# Tests de forecast por SKU
+# ============================================================
+
+CATALOGO = pl.DataFrame({
+    "masa": ["Clásica", "Clásica", "Proteica"],
+    "sabor": ["Dulce", "Oreo", "Dulce"],
+})
+LUNES = date(2026, 1, 5)
+
+
+def _items(filas):
+    """filas: (semana_offset, dia_offset, masa, sabor, cantidad)."""
+    return pl.DataFrame({
+        "fecha_emision": [LUNES + timedelta(weeks=w, days=d) for w, d, *_ in filas],
+        "masa": [f[2] for f in filas],
+        "sabor": [f[3] for f in filas],
+        "cantidad": [f[4] for f in filas],
+    })
+
+
+class TestArmarSeriesSemanalesPorSku:
+    """Tests de la grilla semanal por SKU."""
+
+    def test_grilla_compartida_con_ceros(self):
+        # Oreo vende solo en la semana 2: igual tiene las 3 semanas, con ceros.
+        items = _items([
+            (0, 0, "Clásica", "Dulce", 10),
+            (1, 3, "Clásica", "Dulce", 20),
+            (2, 1, "Clásica", "Oreo", 8),
+        ])
+        series = armar_series_semanales_por_sku(items, CATALOGO, LUNES + timedelta(weeks=3))
+        oreo = series.filter(pl.col("sabor") == "Oreo")["unidades"].to_list()
+        assert oreo == [0, 0, 8]
+        assert series.height == 3 * 3  # 3 semanas x 3 SKUs
+
+    def test_agrupa_por_semana_lunes(self):
+        # Lunes y domingo de la misma semana caen juntos.
+        items = _items([
+            (0, 0, "Clásica", "Dulce", 10),
+            (0, 6, "Clásica", "Dulce", 5),
+        ])
+        series = armar_series_semanales_por_sku(items, CATALOGO, LUNES + timedelta(weeks=1))
+        dulce = series.filter((pl.col("masa") == "Clásica") & (pl.col("sabor") == "Dulce"))
+        assert dulce["semana"].to_list() == [LUNES]
+        assert dulce["unidades"].to_list() == [15]
+
+    def test_corte_excluye_semana(self):
+        items = _items([
+            (0, 0, "Clásica", "Dulce", 10),
+            (1, 0, "Clásica", "Dulce", 99),
+        ])
+        series = armar_series_semanales_por_sku(items, CATALOGO, LUNES + timedelta(weeks=1))
+        assert series["unidades"].sum() == 10
+
+    def test_sin_items_falla(self):
+        items = _items([(5, 0, "Clásica", "Dulce", 10)])
+        with pytest.raises(ValueError, match="no hay items"):
+            armar_series_semanales_por_sku(items, CATALOGO, LUNES)
+
+
+class TestForecastPorSku:
+    """Tests del forecast por SKU."""
+
+    def _series(self, semanas=12):
+        filas = []
+        for w in range(semanas):
+            filas.append((w, 0, "Clásica", "Dulce", 40 + (w % 3) * 10))
+            if w % 4 == 0:
+                filas.append((w, 2, "Clásica", "Oreo", 12))
+        items = _items(filas)
+        return armar_series_semanales_por_sku(
+            items, CATALOGO, LUNES + timedelta(weeks=semanas)
+        )
+
+    def test_una_fila_por_sku_del_catalogo(self):
+        resultado = forecast_por_sku(self._series(), lambda s: sma(s, ventana=4))
+        assert resultado.height == CATALOGO.height
+        assert set(zip(resultado["masa"], resultado["sabor"], strict=True)) == set(
+            zip(CATALOGO["masa"], CATALOGO["sabor"], strict=True)
+        )
+
+    def test_semana_predicha_es_la_siguiente(self):
+        resultado = forecast_por_sku(self._series(12), lambda s: sma(s, ventana=4))
+        assert set(resultado["semana_predicha"].to_list()) == {LUNES + timedelta(weeks=12)}
+
+    def test_suma_de_centrales_igual_al_total(self):
+        # SMA es lineal: la suma de los SMA por SKU es el SMA del total.
+        series = self._series()
+        resultado = forecast_por_sku(series, lambda s: sma(s, ventana=4))
+        total = series.group_by("semana").agg(pl.col("unidades").sum()).sort("semana")
+        esperado = sma(total["unidades"].cast(pl.Float64), ventana=4)
+        assert resultado["prediccion_central"].sum() == pytest.approx(esperado)
+
+    def test_sku_sin_ventas_da_cero_y_no_negativo(self):
+        resultado = forecast_por_sku(self._series(), lambda s: sma(s, ventana=4))
+        proteica = resultado.filter(pl.col("masa") == "Proteica").row(0, named=True)
+        assert proteica["prediccion_central"] == 0.0
+        assert proteica["banda_superior"] == 0.0
+        assert (resultado["banda_inferior"] >= 0).all()
+
+    def test_publica_mae_de_naive_para_comparar(self):
+        resultado = forecast_por_sku(self._series(), lambda s: sma(s, ventana=4))
+        assert "mae_naive" in resultado.columns
+        assert (resultado["mae_naive"] >= 0).all()

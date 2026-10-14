@@ -14,6 +14,7 @@ vive en los modelos dbt que consumen este módulo.
 Decisiones metodológicas documentadas en `docs/adr/semana-9.md`.
 """
 
+from datetime import timedelta
 from typing import Callable
 
 import polars as pl
@@ -234,3 +235,113 @@ def generar_forecast(
         "sesgo_backtest": float(errores_firmados.mean()),
         "n_predicciones_backtest": len(backtest),
     }
+
+# ============================================================
+# FORECAST POR SKU (masa x sabor)
+# ============================================================
+
+def armar_series_semanales_por_sku(
+    items: pl.DataFrame,
+    catalogo: pl.DataFrame,
+    hasta_exclusive,
+) -> pl.DataFrame:
+    """Builds one zero-filled weekly series per catalog SKU.
+
+    Every SKU gets the same week grid (from the first observed week of ANY
+    SKU up to the last week before `hasta_exclusive`), so a SKU that sold
+    nothing in a week counts as a real zero and not as a missing point.
+    Without the shared grid, a rarely ordered SKU would be forecast only
+    from the weeks where it did sell, which overstates its demand.
+
+    Args:
+        items: one row per order item, with columns fecha_emision (date),
+            masa (str), sabor (str), cantidad (int).
+        catalogo: one row per valid SKU, with columns masa, sabor.
+        hasta_exclusive: Monday of the first week NOT to include.
+
+    Returns:
+        DataFrame with columns semana (date), masa, sabor, unidades (i64),
+        sorted by masa, sabor, semana.
+    """
+    semanal = (
+        items
+        .filter(pl.col("fecha_emision").is_not_null())
+        .with_columns(pl.col("fecha_emision").dt.truncate("1w").alias("semana"))
+        .filter(pl.col("semana") < pl.lit(hasta_exclusive))
+        .group_by(["semana", "masa", "sabor"])
+        .agg(pl.col("cantidad").sum().alias("unidades"))
+    )
+    if semanal.is_empty():
+        raise ValueError("no hay items con fecha anterior al corte")
+
+    semanas = pl.DataFrame({
+        "semana": pl.date_range(
+            start=semanal["semana"].min(),
+            end=semanal["semana"].max(),
+            interval="1w",
+            eager=True,
+        )
+    })
+    grilla = semanas.join(catalogo.select(["masa", "sabor"]), how="cross")
+    return (
+        grilla
+        .join(semanal, on=["semana", "masa", "sabor"], how="left")
+        .with_columns(pl.col("unidades").fill_null(0).cast(pl.Int64))
+        .sort(["masa", "sabor", "semana"])
+    )
+
+
+def forecast_por_sku(
+    series: pl.DataFrame,
+    modelo: Callable[[pl.Series], float],
+    ventana_backtest: int = 8,
+    nivel_confianza: float = 0.90,
+) -> pl.DataFrame:
+    """Forecasts next week for each SKU, each one with its own backtest.
+
+    The 34% MAE improvement of SMA-4 over naive was measured on the TOTAL
+    series. Per-SKU series are sparser and noisier, so the claim does not
+    carry over: each SKU gets its own walk-forward backtest against SMA-4
+    AND against naive, and both MAEs are published side by side.
+
+    Units cannot be negative, so the band is clipped at zero. The upper
+    band is what the panel uses as "produce this much to be safe".
+
+    Args:
+        series: output of armar_series_semanales_por_sku.
+        modelo: forecasting function (e.g. SMA-4).
+        ventana_backtest: sliding window for walk-forward. Default 8.
+        nivel_confianza: band confidence level. Default 0.90.
+
+    Returns:
+        DataFrame, one row per SKU: masa, sabor, semana_predicha,
+        prediccion_central, banda_inferior, banda_superior, mae_backtest,
+        mae_naive, n_predicciones_backtest, unidades_ultimas_4.
+    """
+    filas = []
+    for (masa, sabor), grupo in series.group_by(["masa", "sabor"], maintain_order=True):
+        grupo = grupo.sort("semana")
+        serie = grupo["unidades"].cast(pl.Float64)
+        fechas = grupo["semana"]
+
+        resultado = generar_forecast(
+            serie, fechas, modelo,
+            ventana_backtest=ventana_backtest,
+            nivel_confianza=nivel_confianza,
+        )
+        backtest_naive = walk_forward_backtest(serie, fechas, naive, ventana_backtest)
+
+        filas.append({
+            "masa": masa,
+            "sabor": sabor,
+            "semana_predicha": fechas.max() + timedelta(weeks=1),
+            "prediccion_central": max(0.0, resultado["prediccion_central"]),
+            "banda_inferior": max(0.0, resultado["banda_inferior"]),
+            "banda_superior": max(0.0, resultado["banda_superior"]),
+            "mae_backtest": resultado["mae_backtest"],
+            "mae_naive": float(backtest_naive["error_absoluto"].mean()),
+            "n_predicciones_backtest": resultado["n_predicciones_backtest"],
+            "unidades_ultimas_4": int(grupo["unidades"].tail(4).sum()),
+        })
+
+    return pl.DataFrame(filas)

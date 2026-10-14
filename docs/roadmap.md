@@ -131,3 +131,14 @@ Estimación: 6-10 horas por semana. Ajustable.
 - Retro breve: qué se aprendió, qué falló, próximos pasos.
 - Revisión de todos los commits del historial para asegurar que no hay PII expuesta.
 - Repo cambiado a público.
+
+## Semana 13 — Integración con el panel operativo
+
+**Entregable:** el panel del negocio muestra el forecast por SKU y los clientes B2B de la semana.
+
+- `mart_forecast_semanal_sku`: SMA-4 por masa x sabor, con backtest propio por SKU.
+- `rpt_panel_clientes_semana`: estado de la semana por cliente (atrasado, le_toca, al_dia).
+- Asset `serving/publicar_panel`: escribe a la planilla "MyM Pipeline" (Editor sólo de esa).
+- `serving/apps_script/lector_panel.gs`: Apps Script de sólo lectura que la sirve como JSON.
+- Decisiones en `docs/decisions/semana-13.md`.
+
