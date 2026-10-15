@@ -142,3 +142,13 @@ Estimación: 6-10 horas por semana. Ajustable.
 - `serving/apps_script/lector_panel.gs`: Apps Script de sólo lectura que la sirve como JSON.
 - Decisiones en `docs/decisions/semana-13.md`.
 
+## Semana 14 — El forecast no depende del día en que se corre
+
+**Entregable:** el mismo pronóstico corriendo el pipeline cualquier día de la semana.
+
+- Sólo semanas cerradas en las tres series (cumple la decisión 6 de semana 9).
+- Se predice siempre la semana que viene, con el backtest medido a ese horizonte (2).
+- Las semanas finales sin ventas cuentan como cero.
+- Pendiente con datos reales: volver a medir la mejora de SMA-4 sobre naive a dos pasos.
+- Decisiones en `docs/decisions/semana-14.md`.
+

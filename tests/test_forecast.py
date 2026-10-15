@@ -22,6 +22,10 @@ from ingestion.forecast import (
     generar_forecast,
     armar_series_semanales_por_sku,
     forecast_por_sku,
+    HORIZONTE_SEMANAS,
+    corte_semanas_cerradas,
+    semana_a_predecir,
+    serie_semanal_total,
 )
 
 
@@ -292,3 +296,89 @@ class TestForecastPorSku:
         resultado = forecast_por_sku(self._series(), lambda s: sma(s, ventana=4))
         assert "mae_naive" in resultado.columns
         assert (resultado["mae_naive"] >= 0).all()
+
+
+# ============================================================
+# Tests del corte de semanas (ADR semana 14)
+# ============================================================
+
+class TestCorteDeSemanas:
+    """La semana en curso no entra nunca y se predice siempre la que viene."""
+
+    @pytest.mark.parametrize("dias", range(7))
+    def test_mismo_resultado_cualquier_dia_de_la_semana(self, dias):
+        hoy = date(2026, 10, 12) + timedelta(days=dias)   # lunes 12 a domingo 18
+        assert corte_semanas_cerradas(hoy) == date(2026, 10, 12)
+        assert semana_a_predecir(hoy) == date(2026, 10, 19)
+
+    def test_el_salto_es_el_horizonte(self):
+        hoy = date(2026, 10, 15)
+        ultima_cerrada = corte_semanas_cerradas(hoy) - timedelta(weeks=1)
+        assert ultima_cerrada + timedelta(weeks=HORIZONTE_SEMANAS) == semana_a_predecir(hoy)
+
+
+def _pedidos(filas):
+    """filas: (fecha, cantidad)."""
+    return pl.DataFrame({
+        "fecha_emision": [f for f, _ in filas],
+        "cantidad_total": [c for _, c in filas],
+    })
+
+
+class TestSerieSemanalTotal:
+
+    def test_excluye_la_semana_en_curso(self):
+        pedidos = _pedidos([(date(2026, 10, 5), 10), (date(2026, 10, 13), 99)])
+        serie = serie_semanal_total(pedidos, corte_semanas_cerradas(date(2026, 10, 15)))
+        assert serie["semana"].to_list() == [date(2026, 10, 5)]
+        assert serie["unidades"].to_list() == [10]
+
+    def test_semanas_finales_sin_pedidos_son_cero(self):
+        # Ventas sólo en la semana del 28/9; las del 5/10 y 12/10... la del 5/10
+        # está cerrada y sin pedidos: tiene que estar, con 0.
+        pedidos = _pedidos([(date(2026, 9, 28), 10)])
+        serie = serie_semanal_total(pedidos, date(2026, 10, 12))
+        assert serie["semana"].to_list() == [date(2026, 9, 28), date(2026, 10, 5)]
+        assert serie["unidades"].to_list() == [10, 0]
+
+    def test_sin_pedidos_cerrados_falla(self):
+        with pytest.raises(ValueError, match="no hay pedidos"):
+            serie_semanal_total(_pedidos([(date(2026, 10, 13), 5)]), date(2026, 10, 12))
+
+
+class TestBacktestConHorizonte:
+
+    def test_horizonte_1_es_el_de_siempre(self):
+        serie = pl.Series([float(i) for i in range(12)])
+        fechas = pl.Series([date(2026, 1, 5) + timedelta(weeks=i) for i in range(12)])
+        a = walk_forward_backtest(serie, fechas, naive, ventana=4)
+        b = walk_forward_backtest(serie, fechas, naive, ventana=4, horizonte=1)
+        assert a.equals(b)
+
+    def test_horizonte_2_no_mira_la_semana_anterior(self):
+        # Con naive y horizonte 2, la predicción de i es el valor de i-2.
+        serie = pl.Series([float(i * 10) for i in range(10)])
+        fechas = pl.Series([date(2026, 1, 5) + timedelta(weeks=i) for i in range(10)])
+        bt = walk_forward_backtest(serie, fechas, naive, ventana=4, horizonte=2)
+        assert len(bt) == 10 - (4 + 2 - 1)
+        assert bt["y_hat"].to_list() == [float((i - 2) * 10) for i in range(5, 10)]
+        assert bt["y_real"].to_list() == [float(i * 10) for i in range(5, 10)]
+
+    def test_horizonte_invalido_falla(self):
+        serie = pl.Series([1.0] * 10)
+        fechas = pl.Series([date(2026, 1, 5) + timedelta(weeks=i) for i in range(10)])
+        with pytest.raises(ValueError, match="horizonte"):
+            walk_forward_backtest(serie, fechas, naive, ventana=4, horizonte=0)
+
+    def test_forecast_por_sku_predice_a_horizonte(self):
+        filas = [(w, 0, "Clásica", "Dulce", 40) for w in range(12)]
+        items = _items(filas)
+        series = armar_series_semanales_por_sku(items, CATALOGO, LUNES + timedelta(weeks=12))
+        r = forecast_por_sku(series, lambda s: sma(s, ventana=4), horizonte=2)
+        assert set(r["semana_predicha"].to_list()) == {LUNES + timedelta(weeks=13)}
+
+    def test_series_por_sku_cuentan_semanas_finales_vacias(self):
+        items = _items([(0, 0, "Clásica", "Dulce", 40)])
+        series = armar_series_semanales_por_sku(items, CATALOGO, LUNES + timedelta(weeks=3))
+        dulce = series.filter((pl.col("masa") == "Clásica") & (pl.col("sabor") == "Dulce"))
+        assert dulce["unidades"].to_list() == [40, 0, 0]

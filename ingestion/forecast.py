@@ -14,7 +14,7 @@ vive en los modelos dbt que consumen este módulo.
 Decisiones metodológicas documentadas en `docs/adr/semana-9.md`.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Callable
 
 import polars as pl
@@ -96,6 +96,7 @@ def walk_forward_backtest(
     fechas: pl.Series,
     modelo: Callable[[pl.Series], float],
     ventana: int = 8,
+    horizonte: int = 1,
 ) -> pl.DataFrame:
     """Backtesting walk-forward con sliding window de tamaño fijo.
     
@@ -113,6 +114,10 @@ def walk_forward_backtest(
         fechas: fechas correspondientes a cada valor de la serie (misma longitud).
         modelo: función que recibe una serie y devuelve una predicción.
         ventana: tamaño de la ventana sliding. Default 8.
+        horizonte: cuántos pasos adelante se predice. 1 = la semana siguiente a
+            la última observada. Con 2, la historia de cada predicción termina
+            dos semanas antes del punto evaluado: es lo que pasa en producción,
+            donde la semana en curso no se usa (ver ADR semana 14).
     
     Returns:
         DataFrame con columnas: semana (datetime), y_real (f64),
@@ -120,15 +125,19 @@ def walk_forward_backtest(
     """
     if len(serie) != len(fechas):
         raise ValueError("serie y fechas deben tener la misma longitud")
-    if len(serie) <= ventana:
+    if horizonte < 1:
+        raise ValueError(f"horizonte debe ser >= 1, recibido: {horizonte}")
+    if len(serie) <= ventana + horizonte - 1:
         raise ValueError(
             f"serie tiene {len(serie)} valores, "
-            f"se requieren más de {ventana} para hacer backtesting"
+            f"se requieren más de {ventana + horizonte - 1} para hacer backtesting"
         )
     
     resultados = []
-    for i in range(ventana, len(serie)):
-        historia = serie[i - ventana : i]
+    for i in range(ventana + horizonte - 1, len(serie)):
+        # La historia termina `horizonte` pasos antes de i (con 1, justo antes).
+        fin = i - horizonte + 1
+        historia = serie[fin - ventana : fin]
         y_real = float(serie[i])
         y_hat = modelo(historia)
         resultados.append({
@@ -191,6 +200,7 @@ def generar_forecast(
     modelo: Callable[[pl.Series], float],
     ventana_backtest: int = 8,
     nivel_confianza: float = 0.90,
+    horizonte: int = 1,
 ) -> dict:
     """Genera forecast para el próximo período con banda de confianza empírica.
     
@@ -217,7 +227,7 @@ def generar_forecast(
         - n_predicciones_backtest: cantidad de predicciones evaluadas (int).
     """
     # Backtesting
-    backtest = walk_forward_backtest(serie, fechas, modelo, ventana_backtest)
+    backtest = walk_forward_backtest(serie, fechas, modelo, ventana_backtest, horizonte)
     errores_firmados = backtest["y_real"] - backtest["y_hat"]
     
     # Banda empírica
@@ -237,6 +247,76 @@ def generar_forecast(
     }
 
 # ============================================================
+# QUÉ SEMANAS SE USAN Y CUÁL SE PREDICE (ADR semana 14)
+# ============================================================
+
+# Desde la última semana cerrada hasta la que se predice hay siempre dos pasos:
+# la semana en curso (que no se usa) y la siguiente (la que se predice).
+HORIZONTE_SEMANAS = 2
+
+
+def lunes_de(dia: date) -> date:
+    """Lunes de la semana (ISO) de `dia`."""
+    return dia - timedelta(days=dia.weekday())
+
+
+def corte_semanas_cerradas(hoy: date) -> date:
+    """Lunes de la semana en curso: las semanas ANTERIORES a esta fecha están cerradas.
+
+    Se usa como límite exclusivo. La semana en curso no entra nunca, se corra el
+    pipeline el día que se corra: con un día de datos (un lunes) o con cinco (un
+    viernes) es igual de incompleta, y el SMA-4 la promediaría como si fuera entera.
+    """
+    return lunes_de(hoy)
+
+
+def semana_a_predecir(hoy: date) -> date:
+    """Lunes de la semana que viene: la primera que todavía no empezó."""
+    return corte_semanas_cerradas(hoy) + timedelta(weeks=1)
+
+
+def serie_semanal_total(pedidos: pl.DataFrame, hasta_exclusive: date) -> pl.DataFrame:
+    """Unidades por semana, de la primera semana con pedidos hasta la última cerrada.
+
+    Las semanas sin pedidos valen cero (ADR semana 9, decisión 7), también las del
+    FINAL: la grilla termina en la última semana cerrada, no en la última con
+    pedidos. Una semana sin ventas justo antes del corte es un dato (cero), no un
+    hueco.
+
+    Args:
+        pedidos: una fila por pedido, con fecha_emision (date) y cantidad_total.
+        hasta_exclusive: lunes de la primera semana que NO entra.
+
+    Returns:
+        DataFrame con columnas semana (date) y unidades (i64), ordenado.
+    """
+    semanal = (
+        pedidos
+        .filter(pl.col("fecha_emision").is_not_null())
+        .with_columns(pl.col("fecha_emision").dt.truncate("1w").alias("semana"))
+        .filter(pl.col("semana") < pl.lit(hasta_exclusive))
+        .group_by("semana")
+        .agg(pl.col("cantidad_total").sum().alias("unidades"))
+    )
+    if semanal.is_empty():
+        raise ValueError("no hay pedidos con fecha anterior al corte")
+    semanas = pl.DataFrame({
+        "semana": pl.date_range(
+            start=semanal["semana"].min(),
+            end=hasta_exclusive - timedelta(weeks=1),
+            interval="1w",
+            eager=True,
+        )
+    })
+    return (
+        semanas
+        .join(semanal, on="semana", how="left")
+        .with_columns(pl.col("unidades").fill_null(0).cast(pl.Int64))
+        .sort("semana")
+    )
+
+
+# ============================================================
 # FORECAST POR SKU (masa x sabor)
 # ============================================================
 
@@ -248,7 +328,7 @@ def armar_series_semanales_por_sku(
     """Builds one zero-filled weekly series per catalog SKU.
 
     Every SKU gets the same week grid (from the first observed week of ANY
-    SKU up to the last week before `hasta_exclusive`), so a SKU that sold
+    SKU up to the last week before `hasta_exclusive`, sales or not), so a SKU that sold
     nothing in a week counts as a real zero and not as a missing point.
     Without the shared grid, a rarely ordered SKU would be forecast only
     from the weeks where it did sell, which overstates its demand.
@@ -274,10 +354,12 @@ def armar_series_semanales_por_sku(
     if semanal.is_empty():
         raise ValueError("no hay items con fecha anterior al corte")
 
+    # La grilla termina en la última semana cerrada, no en la última con ventas:
+    # una semana final sin pedidos es un cero (ver serie_semanal_total).
     semanas = pl.DataFrame({
         "semana": pl.date_range(
             start=semanal["semana"].min(),
-            end=semanal["semana"].max(),
+            end=hasta_exclusive - timedelta(weeks=1),
             interval="1w",
             eager=True,
         )
@@ -296,8 +378,10 @@ def forecast_por_sku(
     modelo: Callable[[pl.Series], float],
     ventana_backtest: int = 8,
     nivel_confianza: float = 0.90,
+    horizonte: int = 1,
 ) -> pl.DataFrame:
-    """Forecasts next week for each SKU, each one with its own backtest.
+    """Forecasts the week `horizonte` steps after the last observed one, per SKU,
+    each one with its own backtest at that same horizon.
 
     The 34% MAE improvement of SMA-4 over naive was measured on the TOTAL
     series. Per-SKU series are sparser and noisier, so the claim does not
@@ -328,13 +412,14 @@ def forecast_por_sku(
             serie, fechas, modelo,
             ventana_backtest=ventana_backtest,
             nivel_confianza=nivel_confianza,
+            horizonte=horizonte,
         )
-        backtest_naive = walk_forward_backtest(serie, fechas, naive, ventana_backtest)
+        backtest_naive = walk_forward_backtest(serie, fechas, naive, ventana_backtest, horizonte)
 
         filas.append({
             "masa": masa,
             "sabor": sabor,
-            "semana_predicha": fechas.max() + timedelta(weeks=1),
+            "semana_predicha": fechas.max() + timedelta(weeks=horizonte),
             "prediccion_central": max(0.0, resultado["prediccion_central"]),
             "banda_inferior": max(0.0, resultado["banda_inferior"]),
             "banda_superior": max(0.0, resultado["banda_superior"]),

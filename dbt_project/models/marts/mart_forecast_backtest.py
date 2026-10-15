@@ -9,12 +9,22 @@ Este mart alimenta el dashboard "Forecast vs Actual" de Metabase y
 sirve como base para calcular la banda de confianza empírica del
 forecast semanal.
 
-Decisiones metodológicas en `docs/adr/semana-9.md`.
+Decisiones metodológicas en `docs/decisions/semana-9.md`. Desde semana 14 sólo
+entran semanas cerradas y el backtest se mide a dos semanas de horizonte, el
+mismo salto que hace el forecast en producción (`docs/decisions/semana-14.md`).
 """
+
+from datetime import date
 
 import polars as pl
 
-from ingestion.forecast import sma, walk_forward_backtest
+from ingestion.forecast import (
+    HORIZONTE_SEMANAS,
+    corte_semanas_cerradas,
+    serie_semanal_total,
+    sma,
+    walk_forward_backtest,
+)
 
 
 def model(dbt, session):
@@ -25,56 +35,22 @@ def model(dbt, session):
         packages=["polars"],
     )
 
-    # Leer fact_pedidos (dbt.ref maneja las dependencias automáticamente)
     fact_pedidos = dbt.ref("fact_pedidos").pl()
 
-    # Agregar por semana ISO
-    serie_semanal = (
-        fact_pedidos
-        .with_columns(
-            pl.col("fecha_emision")
-              .dt.truncate("1w")
-              .alias("semana")
-        )
-        .group_by("semana")
-        .agg(pl.col("cantidad_total").sum().alias("unidades"))
-        .sort("semana")
-    )
+    # Sólo semanas cerradas: la semana en curso nunca entra (ADR semana 9,
+    # decisión 6, que el código no cumplía hasta semana 14).
+    serie = serie_semanal_total(fact_pedidos, corte_semanas_cerradas(date.today()))
 
-        # Rellenar gaps con cero (semanas sin pedidos = ventas cero)
-    semanas_completas = pl.DataFrame({
-        "semana": pl.date_range(
-            start=serie_semanal["semana"].min(),
-            end=serie_semanal["semana"].max(),
-            interval="1w",
-            eager=True,
-        )
-    })
-    serie_completa = (
-        semanas_completas
-        .join(serie_semanal, on="semana", how="left")
-        .with_columns(pl.col("unidades").fill_null(0).cast(pl.Int64))
-    )
-
-        # Filtrar hasta la semana en curso inclusive (se considera cerrada
-    # porque los pedidos B2B se despachan lunes-viernes; los viernes por la
-    # tarde la semana está funcionalmente cerrada). Ver ADR semana 9.
-    from datetime import date, timedelta
-    lunes_semana_actual = date.today() - timedelta(days=date.today().weekday())
-    lunes_proxima_semana = lunes_semana_actual + timedelta(weeks=1)
-    serie_completa = serie_completa.filter(
-        pl.col("semana") < pl.lit(lunes_proxima_semana)
-    )
-    # Correr el backtesting: SMA-4 con ventana 8
-    def sma_4(serie):
-        return sma(serie, ventana=4)
+    def sma_4(historia):
+        return sma(historia, ventana=4)
 
     backtest = walk_forward_backtest(
-        serie=serie_completa["unidades"].cast(pl.Float64),
-        fechas=serie_completa["semana"],
+        serie=serie["unidades"].cast(pl.Float64),
+        fechas=serie["semana"],
         modelo=sma_4,
         ventana=8,
+        horizonte=HORIZONTE_SEMANAS,
     )
 
     # Agregar columna modelo para futura extensibilidad
-    return backtest.with_columns(pl.lit("sma_4_v8").alias("modelo"))
+    return backtest.with_columns(pl.lit("sma_4_v8_h2").alias("modelo"))

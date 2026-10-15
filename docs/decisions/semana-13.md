@@ -89,6 +89,9 @@ el pipeline se corre un lunes, la última semana tiene un día de datos y el SMA
 tira para abajo. Mientras la corrida sea manual, conviene correrlo de viernes a
 domingo. Se reevalúa cuando el schedule se active.
 
+**Resuelto en semana 14** (`docs/decisions/semana-14.md`): sólo entran semanas
+cerradas y se predice siempre la semana que viene, se corra el día que se corra.
+
 ## Referencias
 
 - `dbt_project/models/marts/mart_forecast_semanal_sku.py`

@@ -32,9 +32,9 @@ models:
           - not_null
 
       - name: modelo
-        description: Identificador del modelo usado (ej. sma_4_v8)
+        description: Identificador del modelo usado (ej. sma_4_v8_h2 = SMA-4, ventana 8, horizonte 2)
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['sma_4_v8']
+                values: ['sma_4_v8_h2']
