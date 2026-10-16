@@ -40,6 +40,12 @@ dependencies = [
 
 ]
 
+[project.optional-dependencies]
+# Opcional: export de marts a BigQuery (no se instala por defecto).
+gcp = [
+    "google-cloud-bigquery>=3.25.0",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
